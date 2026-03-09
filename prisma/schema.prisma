@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  SUPERVISOR
+  SUPERUSER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(USER)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cookbooks        Cookbook[]
+  createdRecipes   Recipe[]         @relation("RecipeCreatedBy")
+  updatedRecipes   Recipe[]         @relation("RecipeUpdatedBy")
+  createdCookbooks Cookbook[]       @relation("CookbookCreatedBy")
+  updatedCookbooks Cookbook[]       @relation("CookbookUpdatedBy")
+}
+
+model Cookbook {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner            User     @relation(fields: [ownerId], references: [id])
+  ownerId          String
+  createdBy        User     @relation("CookbookCreatedBy", fields: [createdById], references: [id])
+  createdById      String
+  updatedBy        User?    @relation("CookbookUpdatedBy", fields: [updatedById], references: [id])
+  updatedById      String?
+
+  recipes     Recipe[]
+}
+
+model Recipe {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  servings     Int      @default(1)
+  prepTime     Int?     // minutes
+  cookTime     Int?     // minutes
+  difficulty   String?
+  category     String?
+  notes        String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cookbook    Cookbook  @relation(fields: [cookbookId], references: [id])
+  cookbookId  String
+  createdBy   User      @relation("RecipeCreatedBy", fields: [createdById], references: [id])
+  createdById String
+  updatedBy   User?     @relation("RecipeUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+
+  ingredients Ingredient[]
+  steps       Step[]
+}
+
+model Ingredient {
+  id       String  @id @default(cuid())
+  name     String
+  quantity Float
+  unit     String
+  cost     Float?
+  order    Int     @default(0)
+
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId String
+}
+
+model Step {
+  id          String @id @default(cuid())
+  order       Int
+  description String
+
+  recipe   Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeId String
+}
